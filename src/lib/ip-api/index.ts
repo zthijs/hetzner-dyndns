@@ -15,9 +15,9 @@ export type IpApiResponse = {
   query: string;
 };
 
-export async function getPublicIp(
+export const getPublicIp = async (
   fetchFn: (url: string) => Promise<Response> = globalThis.fetch,
-): Promise<IpApiResponse> {
+): Promise<IpApiResponse> => {
   const response = await fetchFn('http://ip-api.com/json');
   return response.json() as Promise<IpApiResponse>;
-}
+};

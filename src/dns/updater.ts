@@ -1,34 +1,44 @@
+import type { CreateZoneRrsetData, SetZoneRrsetRecordsData } from '@/lib/hetzner';
+import type { Client } from '@/lib/hetzner/client';
 import { logger } from '@/logger';
 import type { ResolvedHostname } from './resolver';
 
 type SetRecordsArgs = {
-  client: unknown;
-  path: { id_or_name: string; rr_name: string; rr_type: string };
+  client: Client;
+  path: {
+    id_or_name: string;
+    rr_name: string;
+    rr_type: SetZoneRrsetRecordsData['path']['rr_type'];
+  };
   body: { records: Array<{ value: string }> };
 };
 
 type CreateRrsetArgs = {
-  client: unknown;
+  client: Client;
   path: { id_or_name: string };
-  body: { name: string; type: string; records: Array<{ value: string }> };
+  body: {
+    name: string;
+    type: CreateZoneRrsetData['body']['type'];
+    records: Array<{ value: string }>;
+  };
 };
 
 export type DnsUpdaterDeps = {
   setZoneRrsetRecords: (args: SetRecordsArgs) => Promise<{ error?: unknown }>;
   createZoneRrset: (args: CreateRrsetArgs) => Promise<unknown>;
   getPublicIp: () => Promise<{ query: string }>;
-  client: unknown;
+  client: Client;
 };
 
-export function createDnsUpdater({
+export const createDnsUpdater = ({
   setZoneRrsetRecords,
   createZoneRrset,
   getPublicIp,
   client,
-}: DnsUpdaterDeps) {
+}: DnsUpdaterDeps) => {
   const lastKnownIp = new Map<string, string>();
 
-  async function setARecord(resolved: ResolvedHostname, ip: string): Promise<void> {
+  const setARecord = async (resolved: ResolvedHostname, ip: string): Promise<void> => {
     const { hostname, zoneName, recordName } = resolved;
 
     if (lastKnownIp.get(hostname) === ip) {
@@ -54,7 +64,7 @@ export function createDnsUpdater({
     }
 
     lastKnownIp.set(hostname, ip);
-  }
+  };
 
   return {
     clearIpCache: () => lastKnownIp.clear(),
@@ -64,4 +74,4 @@ export function createDnsUpdater({
       await Promise.all(resolved.map(r => setARecord(r, ip)));
     },
   };
-}
+};

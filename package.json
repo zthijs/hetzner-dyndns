@@ -15,6 +15,7 @@
     "lint": "biome check",
     "format-n-lint": "biome format && biome check",
     "format-n-lint:fix": "biome format --fix && biome check --fix",
+    "format-n-lint:ci": "biome ci",
     "prepare": "husky"
   },
   "private": true,

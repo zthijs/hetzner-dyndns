@@ -8,7 +8,7 @@ export type ResolvedHostname = {
   recordName: string;
 };
 
-export async function resolveHostname(hostname: string): Promise<ResolvedHostname | null> {
+export const resolveHostname = async (hostname: string): Promise<ResolvedHostname | null> => {
   const parts = hostname.toLowerCase().split('.');
 
   for (let i = parts.length - 2; i >= 0; i--) {
@@ -22,9 +22,9 @@ export async function resolveHostname(hostname: string): Promise<ResolvedHostnam
   }
 
   return null;
-}
+};
 
-export async function validateHostnames(hostnames: string[]): Promise<ResolvedHostname[]> {
+export const validateHostnames = async (hostnames: string[]): Promise<ResolvedHostname[]> => {
   const resolved = await Promise.all(
     hostnames.map(async hostname => {
       const result = await resolveHostname(hostname);
@@ -36,4 +36,4 @@ export async function validateHostnames(hostnames: string[]): Promise<ResolvedHo
   );
 
   return resolved.filter((r): r is ResolvedHostname => r !== null);
-}
+};
