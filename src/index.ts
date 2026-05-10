@@ -25,9 +25,41 @@ logger.info(
   `Tracking ${resolvedHostnames.length} hostname(s): ${resolvedHostnames.map(r => r.hostname).join(', ')}`,
 );
 
-await updateDnsRecords(resolvedHostnames);
+let isShuttingDown = false;
+let currentRun: Promise<unknown> | null = null;
 
-Bun.cron(env.DYNDNS_CRON_SCHEDULE, async () => {
-  logger.info('Running scheduled DNS update...');
-  await updateDnsRecords(resolvedHostnames);
-});
+const runUpdate = async (label: string) => {
+  if (isShuttingDown) {
+    logger.warn(`Skipping ${label}: shutdown in progress`);
+    return;
+  }
+  logger.info(`Running ${label}...`);
+  currentRun = updateDnsRecords(resolvedHostnames).catch(err =>
+    logger.error({ err }, `${label} failed`),
+  );
+  await currentRun;
+  currentRun = null;
+};
+
+await runUpdate('initial DNS update');
+
+const job = Bun.cron(env.DYNDNS_CRON_SCHEDULE, () => runUpdate('scheduled DNS update'));
+
+const shutdown = async (signal: NodeJS.Signals) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`Received ${signal}, shutting down gracefully...`);
+
+  job.stop();
+
+  if (currentRun) {
+    logger.info('Waiting for in-flight DNS update to finish...');
+    await currentRun;
+  }
+
+  logger.info('Shutdown complete.');
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
